@@ -25,14 +25,49 @@
 # Eg. equal 0x28, means that key button D pressed.
 .eqv OUT_ADRESS_HEXA_KEYBOARD 0xFFFF0014
 .text
-main: 	li $t1, IN_ADRESS_HEXA_KEYBOARD
-	li $t2, OUT_ADRESS_HEXA_KEYBOARD
-	li $t3, 0x08 # check row 4 with key C, D,E, F
-polling: sb $t3, 0($t1 ) # must reassign expected row
-	lb $a0, 0($t2) # read scan code of key button
+main: 	li $t3, IN_ADRESS_HEXA_KEYBOARD
+	li $t4, OUT_ADRESS_HEXA_KEYBOARD
+	li $t5, 0x1 # check row 4 with key C, D,E, F
+	li $t6, 0x2
+	li $t7, 0x4 
+	
+polling: 
+	sb $t5, 0($t3 ) # must reassign expected row
+	lb $a0, 0($t4) # read scan code of key button
+	bnez $a0, first_row_call
+	
+	sb $t6, 0($t3 ) # must reassign expected row
+	lb $a0, 0($t4) # read scan code of key button
+	bnez $a0, second_row_call
+
+	sb $t7, 0($t3 ) # must reassign expected row
+	lb $a0, 0($t4) # read scan code of key button
+	bnez $a0, thrird_row_call
+
+back_to_polling: j polling # continue polling
+
+# ================ call function ================
+first_row_call: li $a0, 1
+		li $v0, 1
+		syscall
+		j end
+
+second_row_call: li $a0, 2
+		li $v0, 1
+		syscall
+		j end
+
+thrird_row_call: li $a0, 3
+		li $v0, 1
+		syscall
+		j end
+
+end: li  $v0, 10
+	syscall
+	
+# =================================== more function =========================
 print: li $v0, 34 # print integer (hexa)
 	syscall
-#sleep: li $a0, 100 # sleep 100ms
-#	li $v0, 32
-#	syscall
-#back_to_polling: j polling # continue polling
+sleep: li $a0, 100 # sleep 100ms
+	li $v0, 32
+	syscall

@@ -9,31 +9,78 @@
 .eqv WHEREY 0xffff8040 	# Integer: Current y-location of MarsBot
 .eqv MOVING 0xffff8050 	# Boolean: whether or not to move
 
+.eqv IN_ADRESS_HEXA_KEYBOARD 0xFFFF0012
+.eqv OUT_ADRESS_HEXA_KEYBOARD 0xFFFF0014
+
 .data
 #<Góc>, <Thoi gian>, <Track>
 # NV: 90, 2000, 0, 180, 10000, 1, 0, 10000, 1, 150, 11800, 1, 0, 9500, 1, 90, 2000, 0, 160, 10000, 1, 20, 10000, 1 
+done: .asciiz "done"
 postscriptDCE: .word 140, 5000, 0,
 		180, 14000, 1, 70, 2747, 1, 40, 2747, 1, 20, 2747, 1, 0, 2747, 1, 340, 2747, 1, 320, 2747, 1, 290, 2747, 1,
 		90, 13000, 0,
 		260, 4266, 1, 192, 6399, 1, 168, 6399, 1, 100, 4266 ,1
 		30, 16165, 0,
-		270, 4226, 1, 180, 7000, 1, 90, 4226, 1, 270, 4226, 1, 180, 7000, 1, 90, 4226, 1
+		270, 4226, 1, 180, 7000, 1, 90, 4226, 1, 270, 4226, 1, 180, 7000, 1, 90, 4226, 1 #63
+postscript2:	.word 150, 3000, 0, 180, 8000, 1, 0, 4000, 1, 90, 5000, 1, 180, 4000, 1, 0, 8000, 1, 90, 3000, 0,
+		150, 4618, 1, 180, 4000, 1, 0, 4000, 1, 30, 4618, 1
+postscript3:	.word 150, 3000, 0, 90, 4000, 1, 180, 8000, 1, 0, 8000, 1, 90, 4000, 1, 90, 3000 , 0,
+		180, 8000, 1, 0, 4000, 1, 90, 5000, 1, 180, 4000, 1, 0, 8000, 1
+		
 # ------------------------------------ MAIN ------------------------------------------
 # ------------------------------------ MAIN ------------------------------------------
 # ------------------------------------ MAIN ------------------------------------------
-
+# t0 cho postscript, t2 cho SO PHAN TU
 .text
-main: 
+main: 	li $t3, IN_ADRESS_HEXA_KEYBOARD
+	li $t4, OUT_ADRESS_HEXA_KEYBOARD
+	li $t5, 0x1 
+	li $t6, 0x2
+	li $t7, 0x4 
+	li $t8, 0x8
+	
+# ================= polling ==================================
+polling: 
+	sb $t5, 0($t3 ) 
+	lb $a0, 0($t4) 
+	bnez $a0, call_postscriptDCE
+	
+	sb $t6, 0($t3 ) 
+	lb $a0, 0($t4) 
+	bnez $a0, call_postscript2
+
+	sb $t7, 0($t3 ) 
+	lb $a0, 0($t4) 
+	bnez $a0, call_postscript3
+	
+	sb $t8, 0($t3 ) 
+	lb $a0, 0($t4) 
+	bnez $a0, end_main
+
+back_to_polling: j polling # continue polling
+
+# ================ postscript function ==========================
+call_postscriptDCE:
 	la $t0, postscriptDCE
 	li $t2, 63
+	j CNC_marsbot
+
+call_postscript2:
+	la $t0, postscript2
+	li $t2, 33
+	j CNC_marsbot
 	
+call_postscript3:
+	la $t0, postscript3
+	li $t2, 33
+	j CNC_marsbot
+
+# ========================= marsbot algorithms ==================
+CNC_marsbot:	
 	li $t1, 1 # bien i
-	# jal strlen
-	#j end_main
-	#add $t2, $zero, $s1 # so phan tu cua mang
 	
 loop:
-	bgt $t1, $t2, end_main   # Check dieu kien cua i
+	bgt $t1, $t2, turn_to_polling   # Check dieu kien cua i
 	
 	#lan 3: Track
 	lw $a0, 8($t0)
@@ -58,9 +105,16 @@ continue:
 next_loop:
 	addi $t0, $t0, 12 # tang con tro mang
 	addi $t1, $t1, 3     # i = i + 1
-	j loop               
+	j loop
+
+turn_to_polling: 
+	jal STOP
+	j polling
 end_main:
 	jal STOP
+	la $a0, done
+	li $v0, 4
+	syscall
 	li $v0, 10
 	syscall
 
@@ -120,18 +174,4 @@ ROTATE: li $at, HEADING # change HEADING port
 		nop
 		jr $ra
 		nop
-strlen:    
-    li $s1, 0                   # Initialize counter to 0, luu tru strlen
-    la $t6, postscript                # luu dia chi cua word vao $t6	
-    loop_str:
-        lw $t5, 0($t6)          # Load a byte from the string
-        move $a0, $t5
-        li $v0, 1
-        syscall
-        #beqz $t5, done          # If the byte is zero, end of string reached
-        addi $t6, $t6, 4        # Move to the next byte of the string
-        addi $s1, $s1, 1        # Increment the counter
-    j loop_str                      # Repeat the loop
 
-    done:
-        jr $ra                  # Return from the function
